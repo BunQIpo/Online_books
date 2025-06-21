@@ -44,7 +44,7 @@ Route::middleware(['auth', 'user-role:user'])->group(function () {
 
 
 Route::middleware(['auth', 'user-role:admin'])->group(function () {
-  Route::get('/books/create/{id}', [BookController::class, 'create'])->name('books.create');
+  Route::get('/books/create-for-author/{id}', [BookController::class, 'create'])->name('books.create.for.author');
   Route::get('/users', [AccountsController::class, 'index'])->name('users.index');
   Route::get('/admin/{user}', [AccountsController::class, 'adminAccount'])->name('admin.show');
   Route::post('/user/{user}/make-admin', [AccountsController::class, 'makeAdmin'])->name('user.makeAdmin');

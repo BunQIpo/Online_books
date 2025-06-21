@@ -693,7 +693,7 @@
                                 </a>
 
                                 <!-- Add Book Without Author -->
-                                <a href="{{ url('/books/create/' . $id) }}" class="action-link">
+                                <a href="{{ route('books.create.for.author', $id) }}" class="action-link">
                                     <div class="action-item">
                                         <div class="action-icon bg-primary text-white">
                                             <i class="fas fa-book"></i>
@@ -743,7 +743,7 @@
                                     </div>
                                     <div>
                                         <span class="badge bg-primary">{{ $user->booksCreated ? $user->booksCreated->count() : 0 }}</span>
-                                        <a href="{{ url('/books/create/0') }}" class="btn btn-sm btn-outline-primary ms-2">
+                                        <a href="{{ route('books.create.for.author', 0) }}" class="btn btn-sm btn-outline-primary ms-2">
                                             <i class="fas fa-plus-circle me-1"></i> Add New
                                         </a>
                                     </div>
@@ -756,7 +756,7 @@
                                             </div>
                                             <h5 class="mb-2">No Books Added Yet</h5>
                                             <p class="mb-3">Start creating your digital library by adding books</p>
-                                            <a href="{{ url('/books/create/0') }}" class="btn btn-primary">
+                                            <a href="{{ route('books.create.for.author', 0) }}" class="btn btn-primary">
                                                 <i class="fas fa-plus-circle me-2"></i> Add Your First Book
                                             </a>
                                         </div>
@@ -898,7 +898,7 @@
 
                                                                 <!-- PDF View Button removed as requested -->
 
-                                                                <a href="{{ url('/books/create/' . $author->id) }}"
+                                                                <a href="{{ route('books.create.for.author', $author->id) }}"
                                                                     class="btn btn-success btn-sm btn-custom" title="Add Book">
                                                                     <i class="fas fa-book-medical"></i>
                                                                 </a>

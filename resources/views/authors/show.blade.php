@@ -305,7 +305,7 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{{url('/books/create/'.$author->id )}}">
+                            <a class="dropdown-item" href="{{ route('books.create.for.author', $author->id) }}">
                                 <i class="fas fa-plus-circle me-2"></i> Add Book
                             </a>
                         </li>
@@ -376,7 +376,7 @@
                                     <a href="{{ route('authors.edit', $author->id) }}" class="btn btn-outline-primary">
                                         <i class="fas fa-edit"></i> Edit Details
                                     </a>
-                                    <a href="{{ url('/books/create/'.$author->id) }}" class="btn btn-outline-success">
+                                    <a href="{{ route('books.create.for.author', $author->id) }}" class="btn btn-outline-success">
                                         <i class="fas fa-plus-circle"></i> Add New Book
                                     </a>
                                 </div>
@@ -410,7 +410,7 @@
 
                         @auth
                             @if(Auth::user()->role == 'admin')
-                                <a href="{{ url('/books/create/'.$author->id) }}" class="btn btn-primary">
+                                <a href="{{ route('books.create.for.author', $author->id) }}" class="btn btn-primary">
                                     <i class="fas fa-plus-circle me-2"></i> Add First Book
                                 </a>
                             @endif
