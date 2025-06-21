@@ -245,6 +245,12 @@
         margin-right: 0.3rem;
     }
 
+    .text-end {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+
     @media (max-width: 991px) {
         .author-info, .author-avatar-container {
             padding: 1.5rem;
@@ -418,6 +424,8 @@
                             <thead>
                                 <tr>
                                     <th>Title</th>
+                                    <th>Genre</th>
+                                    <th>PDF</th>
                                     <th>Readers</th>
                                     <th>Status</th>
                                     <th class="text-end">Actions</th>
@@ -432,6 +440,16 @@
                                             <span>{{ $book->title }}</span>
                                         </div>
                                     </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ $book->genre }}</span>
+                                    </td>
+                                    <td>
+                                        @if($book->file)
+                                            <i class="fas fa-file-pdf text-danger"></i>
+                                        @else
+                                            <i class="fas fa-times-circle text-muted"></i>
+                                        @endif
+                                    </td>
                                     <td>{{ $book->borrowedBy()->count() }}</td>
                                     <td>
                                         <span class="status-badge {{ $book->status == 'availiable' ? 'status-available' : 'status-unavailable' }}">
@@ -439,9 +457,20 @@
                                         </span>
                                     </td>
                                     <td class="text-end">
-                                        <a href="{{ route('books.show', $book->id) }}" class="btn-view">
+                                        <a href="{{ route('books.show', $book->id) }}" class="btn-view me-2">
                                             <i class="far fa-eye"></i> View
                                         </a>
+                                        @auth
+                                            @if(Auth::user()->role == 'admin' && $book->file)
+                                                <a href="{{ route('books.view', $book->id) }}" class="btn-view" style="background-color: #dc3545;">
+                                                    <i class="fas fa-file-pdf"></i> View PDF
+                                                </a>
+                                            @elseif(Auth::user()->booksBorrowed->contains($book->id))
+                                                <a href="{{ route('books.view', $book->id) }}" class="btn-view" style="background-color: #28a745;">
+                                                    <i class="fas fa-book-open"></i> Read
+                                                </a>
+                                            @endif
+                                        @endauth
                                     </td>
                                 </tr>
                                 @endforeach

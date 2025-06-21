@@ -50,6 +50,16 @@
   .btn-success:hover, .btn-danger:hover, .btn-warning:hover {
     transform: translateY(-2px);
   }
+
+  /* Recommendation section styles */
+  .book-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .book-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
 </style>
 
 <!-- Book Detail Header Banner -->
@@ -64,8 +74,8 @@
           </ol>
         </nav>
         <h1 class="display-5 fw-bold text-primary">{{ $book->title }}</h1>
-        @if(!empty($book->writtenBy))
-        <p class="lead">by <a href="{{ route('authors.show', $book->writtenBy->id ?? 1) }}" class="text-decoration-none">{{ $book->writtenBy['name'] ?? 'Anonymous' }}</a></p>
+        @if($book->author_id && $book->writtenBy)
+        <p class="lead">by <a href="{{ route('authors.show', $book->author_id) }}" class="text-decoration-none">{{ $book->writtenBy->name }}</a></p>
         @else
         <p class="lead">by Anonymous</p>
         @endif
@@ -105,7 +115,7 @@
           </div>
 
           @auth
-            @if(auth()->user()->booksBorrowed->contains($book->id))
+            @if(auth()->user()->booksBorrowed->contains($book->id) && auth()->user()->role != 'admin')
               <a class="btn btn-lg btn-success w-100 mb-3" href="{{url('/books/view', $book->id)}}">
                 <i class="fas fa-book-open me-2"></i> Read Book
               </a>
@@ -160,31 +170,39 @@
             </div>
             @auth
               <div class="ms-3 d-grid gap-2 d-md-block">
-                <form action="{{ route('books.borrow', $book->id) }}" method="POST" class="d-inline">
-                  @csrf
-                  @if($book->status == 'availiable')
-                    <button type="submit" class="btn btn-primary">
-                      <i class="fas fa-shopping-cart me-2"></i> Borrow for {{$book->credit_price}} credits
-                    </button>
-                  @else
-                    <button type="submit" class="btn btn-primary" disabled>
-                      <i class="fas fa-shopping-cart me-2"></i> Borrow for {{$book->credit_price}} credits
-                    </button>
-                  @endif
-                </form>
-                @if(auth()->user()->booksBorrowed->contains($book->id))
-                  <form action="{{ route('books.extend', $book->id) }}" method="POST" class="d-inline ms-2">
+                @if(auth()->user()->role == 'admin')
+                  <!-- Admin sees View PDF button instead of Borrow -->
+                  <a href="{{url('/books/view', $book->id)}}" class="btn btn-primary">
+                    <i class="fas fa-file-pdf me-2"></i> View PDF
+                  </a>
+                @else
+                  <!-- Regular users see Borrow button -->
+                  <form action="{{ route('books.borrow', $book->id) }}" method="POST" class="d-inline">
                     @csrf
                     @if($book->status == 'availiable')
-                      <button type="submit" class="btn btn-warning text-white">
-                        <i class="fas fa-calendar-plus me-2"></i> Extend ({{number_format($book->credit_price / 3, 2)}} credits)
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart me-2"></i> Borrow for {{$book->credit_price}} credits
                       </button>
                     @else
-                      <button type="submit" class="btn btn-warning text-white" disabled>
-                        <i class="fas fa-calendar-plus me-2"></i> Extend
+                      <button type="submit" class="btn btn-primary" disabled>
+                        <i class="fas fa-shopping-cart me-2"></i> Borrow for {{$book->credit_price}} credits
                       </button>
                     @endif
                   </form>
+                  @if(auth()->user()->booksBorrowed->contains($book->id))
+                    <form action="{{ route('books.extend', $book->id) }}" method="POST" class="d-inline ms-2">
+                      @csrf
+                      @if($book->status == 'availiable')
+                        <button type="submit" class="btn btn-warning text-white">
+                          <i class="fas fa-calendar-plus me-2"></i> Extend ({{number_format($book->credit_price / 3, 2)}} credits)
+                        </button>
+                      @else
+                        <button type="submit" class="btn btn-warning text-white" disabled>
+                          <i class="fas fa-calendar-plus me-2"></i> Extend
+                        </button>
+                      @endif
+                    </form>
+                  @endif
                 @endif
               </div>
             @else
@@ -267,15 +285,54 @@
             @endif
           @endauth
 
-          <!-- Related Books Section (Placeholder) -->
+          <!-- Related Books Section -->
           <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white py-3">
               <h2 class="h4 mb-0">You may also like</h2>
             </div>
             <div class="card-body">
-              <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> More book recommendations would appear here based on genre and author.
-              </div>
+              @if($similarBooks->count() > 0)
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+                  @foreach($similarBooks as $similarBook)
+                    <div class="col">
+                      <div class="card h-100 book-card border-0 shadow-sm">
+                        <div class="position-relative" style="height: 160px; overflow: hidden;">
+                          @if($similarBook->image_path)
+                            <img src="{{ asset('storage/' . $similarBook->image_path) }}" class="card-img-top" alt="{{ $similarBook->title }}" style="height: 100%; object-fit: cover;">
+                          @else
+                            <img src="{{ asset('images/default-book.jpg') }}" class="card-img-top" alt="{{ $similarBook->title }}" style="height: 100%; object-fit: cover;">
+                          @endif
+                          <div class="position-absolute top-0 end-0 p-2">
+                            @if($similarBook->status == 'availiable')
+                              <span class="badge bg-success">Available</span>
+                            @else
+                              <span class="badge bg-danger">Unavailable</span>
+                            @endif
+                          </div>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                          <h5 class="card-title" style="font-size: 0.9rem; font-weight: 600;">{{ Str::limit($similarBook->title, 40) }}</h5>
+                          <p class="text-muted small mb-1">
+                            @if($similarBook->writtenBy)
+                              By {{ $similarBook->writtenBy->name }}
+                            @else
+                              By Anonymous
+                            @endif
+                          </p>
+                          <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <span class="badge bg-light text-dark px-2 py-1">{{ $similarBook->credit_price }} credits</span>
+                            <a href="{{ route('books.show', $similarBook->id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  @endforeach
+                </div>
+              @else
+                <div class="alert alert-info">
+                  <i class="fas fa-info-circle me-2"></i> No similar books found based on this book's genre or author.
+                </div>
+              @endif
             </div>
           </div>
 

@@ -65,11 +65,21 @@
                                         </div>
                                     </div>
 
-                                    @if(!empty($author['name']))
-                                        <input type="hidden" name="author_id" id="author_id" value="{{$author->id}}">
-                                    @else
-                                        <input type="hidden" name="author_id" id="author_id" value="0">
-                                    @endif
+                                    <div class="row mt-3">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label for="author_id">Author:</label>
+                                                <select name="author_id" id="author_id" class="form-control @error('author_id') is-invalid @enderror">
+                                                    <option value="0">-- Select Author (Optional) --</option>
+                                                    @foreach($authors as $authorItem)
+                                                        <option value="{{ $authorItem->id }}" {{ (isset($author) && $author->id == $authorItem->id) ? 'selected' : '' }}>
+                                                            {{ $authorItem->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div class="row mt-3">
                                         <div class="col-md-12">

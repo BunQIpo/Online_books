@@ -31,31 +31,36 @@ class BookController extends Controller
         $direction = $request->direction ?? 'asc';
 
         // Validate sort field to prevent SQL injection
-        $allowedSortFields = ['title', 'credit_price', 'created_at', 'genre'];
+        $allowedSortFields = ['title', 'credit_price', 'created_at', 'genre', 'popular'];
         $sort = in_array($sort, $allowedSortFields) ? $sort : 'title';
 
         // Validate direction
         $direction = in_array($direction, ['asc', 'desc']) ? $direction : 'asc';
 
-        $books = Book::where(
-            [
-                ['title', '!=', Null],
-                [
-                    function ($query) use ($request) {
-                        if ($term = $request->term) {
-                            $query->orWhere('title', 'LIKE', '%' . $term . '%')->get();
-                        }
-                    }
-                ]
-            ]
-        )
-            ->orderBy(
-                $sort,
-                $direction
-            )
-            ->paginate(
-                50
-            );
+        // Start building the query
+        $query = Book::where('title', '!=', null);
+
+        // Add search term if provided
+        if ($term = $request->term) {
+            $query->where(function($q) use ($term) {
+                $q->where('title', 'LIKE', '%' . $term . '%')
+                  ->orWhere('genre', 'LIKE', '%' . $term . '%');
+            });
+        }
+
+        // Special handling for popularity sort
+        if ($sort === 'popular') {
+            // Sort by borrow count (popularity)
+            $books = Book::select('books.*')
+                ->leftJoin('book_user', 'books.id', '=', 'book_user.book_id')
+                ->selectRaw('COUNT(book_user.user_id) as borrow_count')
+                ->groupBy('books.id')
+                ->orderBy('borrow_count', $direction)
+                ->paginate(50);
+        } else {
+            // Regular sort by table column
+            $books = $query->orderBy($sort, $direction)->paginate(50);
+        }
         return view(
             'books/index',
             [
@@ -71,11 +76,15 @@ class BookController extends Controller
      */
     public function create($id): View
     {
+        // Get all available authors for dropdown selection
+        $authors = Author::orderBy('name')->get();
+
         if ($id == 0) {
-            return view('books.create');
+            return view('books.create', compact('authors'));
         }
+
         $author = Author::findorfail($id);
-        return view('books.create', compact('author'));
+        return view('books.create', compact('author', 'authors'));
     }
 
     /**
@@ -90,7 +99,7 @@ class BookController extends Controller
     public function store(Request $request)
     {
         $user = Auth::user();
-        $id = $request->author_id;
+        $id = $request->author_id ?? 0;
 
         // Refresh the CSRF token to prevent Token Mismatch Exception
         $request->session()->regenerateToken();
@@ -102,6 +111,7 @@ class BookController extends Controller
                     'genre' => 'required',
                     'description' => 'required',
                     'credit_price' => 'required|numeric|min:0',
+                    'author_id' => 'nullable|exists:authors,id',
                     'book_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                     'pdf_file' => 'nullable|file|mimes:pdf|max:40960' // 40MB max for PDF files
                 ]
@@ -248,11 +258,12 @@ class BookController extends Controller
             Log::info('Creating book with data: ' . json_encode($data));
             $book = Book::create($data);
 
-            // Associate with author if provided
-            if ($id != 0) {
-                $author = Author::findOrFail($id);
+            // Associate with author if provided through path parameter or form select
+            $authorId = $request->author_id ?? $id;
+            if ($authorId != 0) {
+                $author = Author::findOrFail($authorId);
                 $author->booksWritten()->save($book);
-                Log::info('Associated book with author ID: ' . $id);
+                Log::info('Associated book with author ID: ' . $authorId);
             }
 
             // Set success message
@@ -299,9 +310,24 @@ class BookController extends Controller
      */
     public function show(Book $book): View
     {
+        // Find similar books based on genre and author (if available)
+        $similarBooks = Book::where('id', '!=', $book->id) // Exclude current book
+            ->where(function($query) use ($book) {
+                // Match by genre
+                $query->where('genre', $book->genre);
+
+                // Or match by author if available
+                if ($book->author_id) {
+                    $query->orWhere('author_id', $book->author_id);
+                }
+            })
+            ->orderBy('title')
+            ->limit(4)
+            ->get();
+
         return view(
             'books.show',
-            compact('book')
+            compact('book', 'similarBooks')
         );
     }
 
@@ -313,9 +339,12 @@ class BookController extends Controller
      */
     public function edit(Book $book): View
     {
+        // Get all available authors for dropdown selection
+        $authors = Author::orderBy('name')->get();
+
         return view(
             'books.edit',
-            compact('book')
+            compact('book', 'authors')
         );
     }
 
@@ -335,7 +364,9 @@ class BookController extends Controller
                 'genre' => 'required',
                 'description' => 'required',
                 'credit_price' => 'required',
-                'book_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'author_id' => 'nullable|exists:authors,id',
+                'book_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'book_file' => 'nullable|file|mimes:pdf|max:40000' // Added PDF validation, 40MB max
             ]
         );
 
@@ -364,9 +395,49 @@ class BookController extends Controller
             }
         }
 
+        // Handle PDF file upload if provided
+        if ($request->hasFile('book_file')) {
+            try {
+                $file = $request->file('book_file');
+
+                // Get file size in MB for display
+                $fileSizeMB = round($file->getSize() / 1048576, 2);
+
+                // Generate a unique filename with original extension
+                $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9.]/', '_', $file->getClientOriginalName());
+
+                // Move the file
+                $file->move('assets', $filename);
+
+                // Remove old file if it exists
+                if ($book->file && file_exists(public_path('assets/' . $book->file))) {
+                    unlink(public_path('assets/' . $book->file));
+                }
+
+                // Add file to data for update
+                $data['file'] = $filename;
+
+                Log::info('PDF updated successfully: ' . $filename . ' (' . $fileSizeMB . ' MB)');
+            } catch (\Exception $e) {
+                Log::error('PDF update error: ' . $e->getMessage());
+                return back()->with('error', 'Error processing PDF upload: ' . $e->getMessage());
+            }
+        }
+
+        // Update the book with validated data
         $book->update($data);
+
+        // Associate with author if provided
+        if ($request->has('author_id') && $request->author_id != 0) {
+            $authorId = $request->author_id;
+            $author = Author::findOrFail($authorId);
+            $book->author_id = $author->id;
+            $book->save();
+            Log::info('Book updated and associated with author ID: ' . $authorId);
+        }
+
         $user = Auth::user();
-        return redirect()->route('books.show', compact('book'));
+        return redirect()->route('books.show', compact('book'))->with('success', 'Book updated successfully');
     }
 
     /**
@@ -652,7 +723,7 @@ class BookController extends Controller
      * Download the PDF file for a book (admin only)
      *
      * @param  int  $id
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
      */
     public function download($id)
     {

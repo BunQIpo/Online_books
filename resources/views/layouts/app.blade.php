@@ -93,19 +93,21 @@
                             <a class="nav-link" style="font-size: 18px;" href="{{ route('books.index') }}">Books</a>
                         </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link" style="font-size: 18px;" href="{{ route('authors.index') }}">Authors</a>
-                        </li>
-
                         @auth
-                            <?php $role = Auth::user()->role; ?>
-                            @if($role == 'admin')
+                            <?php $userRole = Auth::user()->role ?? ''; ?>
+                            @if($userRole == 'admin')
+                            <li class="nav-item">
+                                <a class="nav-link" style="font-size: 18px;" href="{{ route('authors.index') }}">Authors</a>
+                            </li>
+                            @endif
+
+                            @if($userRole == 'admin')
                                 <li class="nav-item">
                                     <a class="nav-link" style="font-size: 18px;" href="{!! route('admin.show', Auth::user()->id) !!}">{{__('My Account')}}</a>
                                 </li>
                             @endif
 
-                            @if($role == 'user')
+                            @if($userRole == 'user')
                                 <li class="nav-item">
                                     <a class="nav-link" style="font-size: 18px;" href="{!! route('user.show', Auth::user()->id) !!}">{{__('My Account')}}</a>
                                 </li>

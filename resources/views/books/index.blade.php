@@ -278,35 +278,29 @@
   <!-- Book List Section -->
   <div class="books-section">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3><span style="color: var(--primary-color);">Book</span> List</h3>
-      <div class="d-flex align-items-center">
+      <h3><span style="color: var(--primary-color);">Book</span> List</h3>        <div class="d-flex align-items-center">
         <div class="dropdown me-3">
           <button class="btn btn-outline-primary dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-sort me-1"></i> Sort By
+            <i class="fas fa-sort me-1"></i> <span id="currentSortText">Sort By</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
+            <!-- Alphabetical sorting -->
+            <li><h6 class="dropdown-header">Alphabetical</h6></li>
             <li><a class="dropdown-item {{ request('sort') == 'title' && request('direction') == 'asc' ? 'active' : '' }}"
                   href="{{ route('books.index', ['sort' => 'title', 'direction' => 'asc', 'term' => request('term')]) }}">
-                  <i class="fas fa-sort-alpha-down me-2"></i> Title (A-Z)
+                  <i class="fas fa-sort-alpha-down me-2"></i> A-Z
                 </a>
             </li>
             <li><a class="dropdown-item {{ request('sort') == 'title' && request('direction') == 'desc' ? 'active' : '' }}"
                   href="{{ route('books.index', ['sort' => 'title', 'direction' => 'desc', 'term' => request('term')]) }}">
-                  <i class="fas fa-sort-alpha-up me-2"></i> Title (Z-A)
+                  <i class="fas fa-sort-alpha-up me-2"></i> Z-A
                 </a>
             </li>
+
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item {{ request('sort') == 'credit_price' && request('direction') == 'asc' ? 'active' : '' }}"
-                  href="{{ route('books.index', ['sort' => 'credit_price', 'direction' => 'asc', 'term' => request('term')]) }}">
-                  <i class="fas fa-coins me-2"></i> Price (Low to High)
-                </a>
-            </li>
-            <li><a class="dropdown-item {{ request('sort') == 'credit_price' && request('direction') == 'desc' ? 'active' : '' }}"
-                  href="{{ route('books.index', ['sort' => 'credit_price', 'direction' => 'desc', 'term' => request('term')]) }}">
-                  <i class="fas fa-coins me-2"></i> Price (High to Low)
-                </a>
-            </li>
-            <li><hr class="dropdown-divider"></li>
+
+            <!-- Date sorting -->
+            <li><h6 class="dropdown-header">Date Added</h6></li>
             <li><a class="dropdown-item {{ request('sort') == 'created_at' && request('direction') == 'desc' ? 'active' : '' }}"
                   href="{{ route('books.index', ['sort' => 'created_at', 'direction' => 'desc', 'term' => request('term')]) }}">
                   <i class="fas fa-calendar-alt me-2"></i> Newest First
@@ -315,6 +309,36 @@
             <li><a class="dropdown-item {{ request('sort') == 'created_at' && request('direction') == 'asc' ? 'active' : '' }}"
                   href="{{ route('books.index', ['sort' => 'created_at', 'direction' => 'asc', 'term' => request('term')]) }}">
                   <i class="fas fa-calendar-alt me-2"></i> Oldest First
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
+            <!-- Popularity sorting -->
+            <li><h6 class="dropdown-header">Popularity</h6></li>
+            <li><a class="dropdown-item {{ request('sort') == 'popular' && request('direction') == 'desc' ? 'active' : '' }}"
+                  href="{{ route('books.index', ['sort' => 'popular', 'direction' => 'desc', 'term' => request('term')]) }}">
+                  <i class="fas fa-fire me-2"></i> Most Popular
+                </a>
+            </li>
+            <li><a class="dropdown-item {{ request('sort') == 'popular' && request('direction') == 'asc' ? 'active' : '' }}"
+                  href="{{ route('books.index', ['sort' => 'popular', 'direction' => 'asc', 'term' => request('term')]) }}">
+                  <i class="fas fa-fire-alt me-2"></i> Least Popular
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
+            <!-- Price sorting -->
+            <li><h6 class="dropdown-header">Price</h6></li>
+            <li><a class="dropdown-item {{ request('sort') == 'credit_price' && request('direction') == 'asc' ? 'active' : '' }}"
+                  href="{{ route('books.index', ['sort' => 'credit_price', 'direction' => 'asc', 'term' => request('term')]) }}">
+                  <i class="fas fa-coins me-2"></i> Price (Low to High)
+                </a>
+            </li>
+            <li><a class="dropdown-item {{ request('sort') == 'credit_price' && request('direction') == 'desc' ? 'active' : '' }}"
+                  href="{{ route('books.index', ['sort' => 'credit_price', 'direction' => 'desc', 'term' => request('term')]) }}">
+                  <i class="fas fa-coins me-2"></i> Price (High to Low)
                 </a>
             </li>
           </ul>
@@ -361,10 +385,10 @@
                 <h5 class="book-title">{{ $book->title }}</h5>
                 <p class="book-author">
                   <i class="fas fa-user-edit me-1" style="color: var(--primary-color);"></i>
-                  @if(empty($book->writtenBy))
-                    Anonymous
+                  @if($book->author_id && $book->writtenBy)
+                    <a href="{{ route('authors.show', $book->author_id) }}" class="text-decoration-none">{{ $book->writtenBy->name }}</a>
                   @else
-                    {{ $book->writtenBy['name'] }}
+                    Anonymous
                   @endif
                 </p>
 
@@ -386,7 +410,12 @@
                   </a>
 
                   @auth
-                    @if($book->status == 'availiable' && !auth()->user()->booksBorrowed->contains($book->id))
+                    @if(auth()->user()->role == 'admin')
+                      <!-- Admin users see View PDF button -->
+                      <a href="{{ route('books.view', $book->id) }}" class="btn btn-sm btn-primary ms-1">
+                        <i class="fas fa-file-pdf me-1"></i> View PDF
+                      </a>
+                    @elseif($book->status == 'availiable' && !auth()->user()->booksBorrowed->contains($book->id))
                       <form action="{{ route('books.borrow', $book->id) }}" method="POST" class="d-inline ms-1">
                         @csrf
                         <button type="submit" class="btn btn-sm btn-success">
@@ -417,34 +446,51 @@
 
 @section('scripts')
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Highlight active sort option in dropdown
-    const sortDropdown = document.getElementById('sortDropdown');
-    const dropdownItems = document.querySelectorAll('.dropdown-menu .dropdown-item');
-    const activeItem = document.querySelector('.dropdown-menu .dropdown-item.active');
+document.addEventListener('DOMContentLoaded', function() {
+  // Get current sort parameters from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const sort = urlParams.get('sort');
+  const direction = urlParams.get('direction');
 
-    if (activeItem) {
-      // Set the dropdown button text to show the currently selected sort option
-      sortDropdown.innerHTML = '<i class="fas fa-sort me-1"></i> ' + activeItem.textContent.trim();
+  // Get the sort dropdown button text element
+  const sortTextElement = document.getElementById('currentSortText');
+
+  // Set the appropriate text based on current sort
+  if (sort) {
+    let sortText = 'Sort By';
+
+    if (sort === 'title') {
+      sortText = direction === 'asc' ? 'A-Z' : 'Z-A';
+    } else if (sort === 'created_at') {
+      sortText = direction === 'desc' ? 'Newest First' : 'Oldest First';
+    } else if (sort === 'popular') {
+      sortText = direction === 'desc' ? 'Most Popular' : 'Least Popular';
+    } else if (sort === 'credit_price') {
+      sortText = direction === 'asc' ? 'Price (Low to High)' : 'Price (High to Low)';
     }
 
-    // Make the dropdown items work properly with click events
-    dropdownItems.forEach(item => {
-      item.addEventListener('click', function(e) {
-        // No need for preventDefault as we want the link to work
+    sortTextElement.textContent = sortText;
+  }
 
-        // Add loading indicator
-        const originalButtonText = sortDropdown.innerHTML;
-        sortDropdown.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sorting...';
-        sortDropdown.disabled = true;
+  // Add visual feedback when clicking on dropdown items
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', function() {
+      // Add a loading indicator to the button when clicked
+      const sortButton = document.getElementById('sortDropdown');
+      const originalHtml = sortButton.innerHTML;
 
-        // We'll let the link navigate naturally, but add this visual feedback
-        setTimeout(() => {
-          sortDropdown.innerHTML = originalButtonText;
-          sortDropdown.disabled = false;
-        }, 500);
-      });
+      sortButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sorting...';
+      sortButton.disabled = true;
+
+      // Restore after a short delay if page doesn't reload
+      setTimeout(() => {
+        if (sortButton) {
+          sortButton.innerHTML = originalHtml;
+          sortButton.disabled = false;
+        }
+      }, 5000);
     });
   });
+});
 </script>
 @endsection

@@ -76,25 +76,7 @@
                                     By Unknown Author
                                 @endif
                             </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    @php
-                                        // Generate some realistic rating stars based on borrowedBy count
-                                        $rating = min(5, 3 + ($book->borrowedBy->count() / 4));
-                                        $fullStars = floor($rating);
-                                        $halfStar = ($rating - $fullStars) >= 0.5;
-                                    @endphp
-
-                                    @for($i = 1; $i <= 5; $i++)
-                                        @if($i <= $fullStars)
-                                            <i class="fas fa-star text-warning"></i>
-                                        @elseif($i == $fullStars + 1 && $halfStar)
-                                            <i class="fas fa-star-half-alt text-warning"></i>
-                                        @else
-                                            <i class="far fa-star text-warning"></i>
-                                        @endif
-                                    @endfor
-                                </div>
+                            <div class="d-flex justify-content-end align-items-center mt-3">
                                 <a href="{{ route('books.show', $book->id) }}" class="btn btn-outline-primary btn-sm">Details</a>
                             </div>
                         </div>

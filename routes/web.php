@@ -32,6 +32,8 @@ Auth::routes();
 
 Route::middleware(['auth', 'user-role:user'])->group(function () {
   Route::get('/user/{user}', [AccountsController::class, 'userAccount'])->name('user.show');
+  Route::get('/user/{user}/edit', [AccountsController::class, 'editProfile'])->name('user.edit');
+  Route::put('/user/{user}', [AccountsController::class, 'updateProfile'])->name('user.update');
   Route::get('/user/books/{user}', [AccountsController::class, 'myBooks'])->name('user.books');
   Route::get('/user/credits/{user}', [AccountsController::class, 'myCredits'])->name('user.credits');
   Route::get('/user/buy-credits/{user}', [AccountsController::class, 'buyCredits'])->name('user.buyCredits');
@@ -46,7 +48,9 @@ Route::middleware(['auth', 'user-role:admin'])->group(function () {
   Route::get('/users', [AccountsController::class, 'index'])->name('users.index');
   Route::get('/admin/{user}', [AccountsController::class, 'adminAccount'])->name('admin.show');
   Route::post('/user/{user}/make-admin', [AccountsController::class, 'makeAdmin'])->name('user.makeAdmin');
+  Route::delete('/user/{user}/delete', [AccountsController::class, 'deleteUser'])->name('user.delete');
   Route::post('/books/{book}/change-status', [BookController::class, 'status'])->name('books.status');
+  // Use only one definition for resource routes to avoid conflicts
   Route::resource('/books', BookController::class, ['except' => ['show', 'index']]);
   Route::resource('/authors', AuthorController::class, ['except' => ['show', 'index']]);
   Route::post('/books/{book}/file-upload', [BookController::class, 'upload'])->name('books.upload');

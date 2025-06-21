@@ -783,8 +783,10 @@
                                                             </div>
                                                         </td>
                                                         <td class="align-middle">
-                                                            @if($book->authors && $book->authors->count() > 0)
-                                                                <span class="text-truncate">{{ $book->authors->first()->name }}</span>
+                                                            @if($book->author_id && $book->writtenBy)
+                                                                <a href="{{ route('authors.show', $book->author_id) }}" class="text-decoration-none">
+                                                                    <span class="text-truncate">{{ $book->writtenBy->name }}</span>
+                                                                </a>
                                                             @else
                                                                 <span class="text-muted fst-italic">No author</span>
                                                             @endif
@@ -894,31 +896,7 @@
                                                                     <i class="far fa-eye"></i>
                                                                 </a>
 
-                                                                @php
-                                                                    $booksWithPDFs = $author->booksWritten ? $author->booksWritten->filter(function($book) {
-                                                                        return !empty($book->file);
-                                                                    }) : collect([]);
-                                                                @endphp
-
-                                                                @if($booksWithPDFs->count() > 0)
-                                                                <div class="dropdown">
-                                                                    <button class="btn btn-info btn-sm btn-custom dropdown-toggle" type="button"
-                                                                        id="pdfDropdown{{ $author->id }}" data-bs-toggle="dropdown"
-                                                                        aria-expanded="false" title="View PDFs">
-                                                                        <i class="fas fa-file-pdf"></i>
-                                                                    </button>
-                                                                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="pdfDropdown{{ $author->id }}">
-                                                                        <li><h6 class="dropdown-header">Available PDFs</h6></li>
-                                                                        @foreach($booksWithPDFs as $book)
-                                                                        <li>
-                                                                            <a class="dropdown-item" href="{{ route('books.view', $book->id) }}" target="_blank">
-                                                                                <i class="fas fa-book me-2 text-primary"></i> {{ Str::limit($book->title, 25) }}
-                                                                            </a>
-                                                                        </li>
-                                                                        @endforeach
-                                                                    </ul>
-                                                                </div>
-                                                                @endif
+                                                                <!-- PDF View Button removed as requested -->
 
                                                                 <a href="{{ url('/books/create/' . $author->id) }}"
                                                                     class="btn btn-success btn-sm btn-custom" title="Add Book">
